@@ -1547,6 +1547,7 @@ If not inside a project, call `counsel-projectile-switch-project'."
            (not (projectile-project-p)))
       (counsel-projectile-action-switch-project)
     (projectile-maybe-invalidate-cache arg)
+    (setq projectile-buffers-before-ivy-read (projectile-project-buffers))
     (ivy-read (projectile-prepend-project-name "Load buffer or file: ")
               ;; We use a collection function so that it is called each
               ;; time the `ivy-state' is reset. This is needed for the
@@ -1556,7 +1557,16 @@ If not inside a project, call `counsel-projectile-switch-project'."
               :require-match t
               :action counsel-projectile-action
               :keymap counsel-projectile-map
-              :caller 'counsel-projectile)))
+              :caller 'counsel-projectile
+              :update-fn (lambda ()
+                           (with-ivy-window
+                                      (counsel-projectile-action
+                                       (ivy-state-current ivy-last))))
+              :unwind (lambda ()
+                        (dolist (buffer (cl-set-difference
+                                         (projectile-project-buffers)
+                                         projectile-buffers-before-ivy-read))
+                          (kill-buffer buffer))))))
 
 (ivy-set-display-transformer
  'counsel-projectile
